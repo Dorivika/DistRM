@@ -1,0 +1,4 @@
+/build/
+/CMakeFiles/
+/src/client.cpp/
+/src/server_security.hpp/

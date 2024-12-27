@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package system_monitor;
+
+service system_monitor {
+    rpc GetSystemsStats (SystemRequest) returns (SystemStats) {}
+    rpc StreamResourceUsage (SystemRequest) returns (stream ResourceUpdate) {}
+    rpc AlertOnThreshold (ThresholdRequest) returns (stream Alert) {}
+}
+
+message SystemRequest {
+    string host_id = 1;
+}
+
+message SystemStats {
+    double cpu_usage = 1;
+    double memory_usage = 2;
+    repeated DiskStats disk_stats = 3;
+    repeated ProcessInfo processes = 4;
+}
+
+message DiskStats {
+    string mount_point = 1;
+    double total_space = 2;
+    double used_space = 3;
+}
+
+message ProcessInfo {
+    string name = 1;
+    int32 pid = 2;
+    double cpu_usage = 3;
+    double memory_usage = 4;
+}
+
+message ResourceUpdate {
+    double cpu_usage = 1;
+    double memory_usage = 2;
+    string timestamp = 3;
+}
+
+message ThresholdRequest {
+    string host_id = 1;
+    double cpu_threshold = 2;
+    double memory_threshold = 3;
+}
+
+message Alert {
+    string resource_type = 1;
+    double current_value = 2;
+    double threshold = 3;
+    string timestamp = 4;
+}
