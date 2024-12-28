@@ -3,9 +3,12 @@ project(DistRM)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+include(FindPkgConfig)
+
 # Find required packages
 find_package(Protobuf CONFIG REQUIRED)
 find_package(gRPC CONFIG REQUIRED)
+pkg_check_modules(PROCPS REQUIRED libproc2)
 
 # Create proto library
 add_library(protolib)
