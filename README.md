@@ -132,13 +132,3 @@ docker-compose exec system-monitor bash
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Authors
-
-- Your Name - *Initial work* - [YourGithub](https://github.com/yourusername)
-
-## Acknowledgments
-
-- gRPC team for the excellent RPC framework
-- OpenSSL project for security features
-- ncurses library for the terminal UI
