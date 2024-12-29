@@ -1,31 +1,34 @@
-cmake_minimum_required(VERSION 3.20)
-project(DistRM)
-
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-include(FindPkgConfig)
+cmake_minimum_required(VERSION 3.10)
+project(system_monitor)
 
 # Find required packages
-find_package(Protobuf CONFIG REQUIRED)
-find_package(gRPC CONFIG REQUIRED)
-pkg_check_modules(PROCPS REQUIRED libproc2)
+find_package(Protobuf REQUIRED)
+find_package(gRPC REQUIRED)
+find_package(Threads REQUIRED)
+find_package(PkgConfig REQUIRED)
+find_package(absl REQUIRED)  # Add abseil package
 
-# Create proto library
-add_library(protolib)
+# Find libproc2
+pkg_check_modules(LIBPROC2 REQUIRED libproc2)
 
-# Set proto files
+# Proto files
 set(PROTO_FILES
     proto/system_monitor.proto
 )
 
-# Generate protobuf files
+# Generate protobuf library
+add_library(protolib)
+target_include_directories(protolib PUBLIC 
+    ${CMAKE_CURRENT_BINARY_DIR}
+    ${LIBPROC2_INCLUDE_DIRS}
+)
+
 protobuf_generate(
     TARGET protolib
     LANGUAGE cpp
     PROTOS ${PROTO_FILES}
 )
 
-# Generate gRPC files
 protobuf_generate(
     TARGET protolib
     LANGUAGE grpc
@@ -34,24 +37,28 @@ protobuf_generate(
     PROTOS ${PROTO_FILES}
 )
 
-# Configure proto library
+# Link protolib dependencies
 target_link_libraries(protolib
     PUBLIC
     protobuf::libprotobuf
     gRPC::grpc++
     gRPC::grpc++_reflection
+    absl::base
+    absl::log
+    absl::strings
 )
 
-target_include_directories(protolib
-    PUBLIC
-    ${CMAKE_CURRENT_BINARY_DIR}
-)
-
-# Create server executable
-add_executable(server src/server.cpp 
-    src/client.cpp
-    src/server_security.hpp)
+# Server executable
+add_executable(server src/server.cpp)
 target_link_libraries(server
     PRIVATE
     protolib
+    Threads::Threads
+    ${LIBPROC2_LIBRARIES}
+    absl::base
+    absl::log
+    absl::strings
 )
+
+target_include_directories(server PRIVATE ${LIBPROC2_INCLUDE_DIRS})
+target_link_directories(server PRIVATE ${LIBPROC2_LIBRARY_DIRS})

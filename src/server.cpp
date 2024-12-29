@@ -16,24 +16,7 @@
 #include <iostream>
 #include <stdexcept>
 
-// namespace proc {
-//     struct cpu_stat_t {
-//         unsigned long long user;
-//         unsigned long long nice;
-//         unsigned long long system;
-//         unsigned long long idle;
-//         unsigned long long iowait;
-//         unsigned long long irq;
-//         unsigned long long softirq;
-//         unsigned long long steal;
-//     };
-
-//     struct proc_stat {
-//         cpu_stat_t cpu;
-//     };
-// }
-
-class SystemMonitorImpl final : public system_monitor::SystemMonitor::Service {
+class SystemMonitorImpl final : public system_monitor::system_monitor::Service {
 private:
     std::mutex mutex_;
     std::unordered_map<std::string, std::queue<system_monitor::Alert>> alerts_;
@@ -71,7 +54,6 @@ private:
         }
         return 0.0;
     }
-
     unsigned long get_memory_usage() {
     struct meminfo_info *mem = nullptr;
     unsigned long used_memory = 0;
@@ -90,29 +72,46 @@ private:
     }
 
     std::vector<pid_t> get_process_list() {
-        std::vector<pid_t> pids;
-        struct pids_info *info = NULL;
-        struct pids_stack *stack = NULL;
-        
-        if (procps_pids_new(&info, NULL, 0) == 0) {
-            while (procps_pids_stack_get(info, &stack) == 0) {
-                pids.push_back(stack->tid);
-            }
-            procps_pids_unref(&info);
+    std::vector<pid_t> pids;
+    struct pids_info *info = NULL;
+    enum pids_item items[] = { PIDS_ID_TGID };  // Request TGID
+    
+    if (procps_pids_new(&info, items, 1) == 0) {
+        struct pids_stack *stack;
+        while ((stack = procps_pids_get(info, PIDS_FETCH_TASKS_ONLY)) != NULL) {
+            pid_t tgid = PIDS_VAL(0, s_int, stack, info);  // Use PIDS_VAL macro to get TGID
+            pids.push_back(tgid);
         }
-        return pids;
+        procps_pids_unref(&info);
+    }
+    return pids;
     }
 
 public:
-    grpc::Status MonitorSystem(grpc::ServerContext* context,
-                             const system_monitor::MonitorRequest* request,
-                             system_monitor::MonitorResponse* response) override {
+    grpc::Status GetSystemsStats(
+        grpc::ServerContext* context,
+        const system_monitor::SystemRequest* request,
+        system_monitor::SystemStats* response) override {
+        
         response->set_cpu_usage(get_cpu_usage());
         response->set_memory_usage(get_memory_usage());
         
-        auto pids = get_process_list();
-        response->set_process_count(pids.size());
-        
+        return grpc::Status::OK;
+    }
+
+    grpc::Status StreamResourceUsage(
+        grpc::ServerContext* context,
+        const system_monitor::SystemRequest* request,
+        grpc::ServerWriter<system_monitor::ResourceUpdate>* writer) override {
+        // Implement streaming stats
+        return grpc::Status::OK;
+    }
+
+    grpc::Status AlertOnThreshold(
+        grpc::ServerContext* context,
+        const system_monitor::ThresholdRequest* request,
+        grpc::ServerWriter<system_monitor::Alert>* writer) override {
+        // Implement alerts
         return grpc::Status::OK;
     }
 };
