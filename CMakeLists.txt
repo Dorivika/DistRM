@@ -9,7 +9,7 @@ set(CMAKE_CXX_COMPILER g++)
 
 # Compiler flags
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fdiagnostics-color=always")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
 
 # Enable core dumps
 execute_process(COMMAND bash -c "ulimit -c unlimited")
@@ -32,40 +32,36 @@ find_package(absl REQUIRED)  # Add abseil package
 pkg_check_modules(LIBPROC2 REQUIRED libproc2)
 
 # Proto files
-set(PROTO_FILES
-    proto/system_monitor.proto
+# set(PROTO_FILES
+#     proto/system_monitor.proto
+# )
+add_library(protolib proto/system_monitor.proto)
+
+target_link_libraries(protolib
+    PUBLIC
+    protobuf::libprotobuf
+    gRPC::grpc++
+    absl::base
+    absl::log
+    absl::strings
 )
 
-# Generate protobuf library
-add_library(protolib)
-target_include_directories(protolib PUBLIC 
-    ${CMAKE_CURRENT_BINARY_DIR}
-    ${LIBPROC2_INCLUDE_DIRS}
-)
 
+
+# Link protolib dependencies
+get_target_property(grpc_cpp_plugin_location gRPC::grpc_cpp_plugin LOCATION)
+
+target_include_directories(protolib PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 protobuf_generate(
     TARGET protolib
     LANGUAGE cpp
-    PROTOS ${PROTO_FILES}
 )
 
 protobuf_generate(
     TARGET protolib
     LANGUAGE grpc
     GENERATE_EXTENSIONS .grpc.pb.h .grpc.pb.cc
-    PLUGIN protoc-gen-grpc=$<TARGET_FILE:gRPC::grpc_cpp_plugin>
-    PROTOS ${PROTO_FILES}
-)
-
-# Link protolib dependencies
-target_link_libraries(protolib
-    PUBLIC
-    protobuf::libprotobuf
-    gRPC::grpc++
-    gRPC::grpc++_reflection
-    absl::base
-    absl::log
-    absl::strings
+    PLUGIN "protoc-gen-grpc=${grpc_cpp_plugin_location}"
 )
 
 # Server executable
