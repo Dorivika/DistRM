@@ -9,7 +9,7 @@ set(CMAKE_CXX_COMPILER g++)
 
 # Compiler flags
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fdiagnostics-color=always")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
 
 # Enable core dumps
 execute_process(COMMAND bash -c "ulimit -c unlimited")
@@ -21,20 +21,23 @@ add_custom_target(build_with_logs
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     COMMENT "Building with logging..."
 )
+
 # Find required packages
 find_package(Protobuf REQUIRED)
 find_package(gRPC REQUIRED)
 find_package(Threads REQUIRED)
 find_package(PkgConfig REQUIRED)
-find_package(absl REQUIRED)  # Add abseil package
+find_package(absl REQUIRED)  # Ensure abseil package is found
+
+# Specify the path to Abseil if installed in a non-standard location
+set(ABSL_DIR "abseil-cpp")  # Adjust this path if necessary
+find_package(absl REQUIRED HINTS ${ABSL_DIR})
+
 
 # Find libproc2
 pkg_check_modules(LIBPROC2 REQUIRED libproc2)
 
 # Proto files
-# set(PROTO_FILES
-#     proto/system_monitor.proto
-# )
 add_library(protolib proto/system_monitor.proto)
 
 target_link_libraries(protolib
@@ -45,8 +48,6 @@ target_link_libraries(protolib
     absl::log
     absl::strings
 )
-
-
 
 # Link protolib dependencies
 get_target_property(grpc_cpp_plugin_location gRPC::grpc_cpp_plugin LOCATION)
